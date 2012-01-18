@@ -18,6 +18,7 @@ import java.net.URL;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -43,6 +44,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import android.app.ListActivity;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Movie;
 //import android.content.pm.ActivityInfo;
 import android.media.MediaMetadataRetriever;
@@ -360,7 +362,8 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 				{
 
 					startMillis = 0;
-
+					mVideoURL = "";
+					
 					int InstanceID = action.getArgumentIntegerValue("InstanceID");
 					
 					String CurrentURI = action.getArgumentValue("CurrentURI");
@@ -418,56 +421,112 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 					{
 						MediaItem media = myXMLHandler.VideoItemList.get(myXMLHandler.VideoItemList.firstKey());
 						Log.d("Stream2Android", "stream name=" + myXMLHandler.VideoItemList.firstKey());
+						String ImageUrl = "";
 						
-						// connect to first res
-						String url = media.getResList().getFirst().get("res");
-
-						Log.d("Stream2Android", "res=" + url);
-
-						durationMillis = fromHMS2Millis(media.getResList().getFirst().get("duration"));
-						Log.d("Stream2Android", "duration=" + durationMillis);
-					
-						URL u;
-						try {
-							u = new URL(url);
-							Log.d("Stream2Android", "stream urlhost=" + u.getHost() + ", remotehost=" 
-									+ action.getRequestHostAddress().split("\\/")[0] + ", localhost=" 
-									+ action.getLocalHostAddress()); 
-			
-							// if no connection can be made, replace host with remote host
-							InetSocketAddress sad = new InetSocketAddress(u.getHost(), u.getPort());
-							Socket so = new Socket();
+						ListIterator<SortedMap<String, String>> li = media.getResList().listIterator();
+						while (li.hasNext())
+						{
+							SortedMap<String, String> resdata = li.next();
+							// connect to first res
+							String resurl = resdata.get("res");
+							Log.d("Stream2Android", "resource url=" + resurl + ""); 
+							// correct url for multi ip-clients
+							URL u;
+							boolean couldconnect = false;
 							try {
-								so.connect(sad, 1000);
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-								url = url.replace(u.getHost(), action.getRequestHostAddress().split("\\/")[0]);
-							}
-							finally
-							{
+								u = new URL(resurl);
+								Log.d("Stream2Android", "stream urlhost=" + u.getHost() + ", remotehost=" 
+										+ action.getRequestHostAddress().split("\\/")[0] + ", localhost=" 
+										+ action.getLocalHostAddress()); 
+				
+								// if no connection can be made, replace host with remote host
+								InetSocketAddress sad = new InetSocketAddress(u.getHost(), u.getPort());
+								Socket so = new Socket();
 								try {
-									so.close();
+									so.connect(sad, 1000);
 								} catch (IOException e) {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
+									resurl = resurl.replace(u.getHost(), action.getRequestHostAddress().split("\\/")[0]);
+									Log.d("Stream2Android", "could not connect to host " + u.getHost() 
+											+ ", connect to host " 
+											+ action.getRequestHostAddress().split("\\/")[0] + " instead"); 
+								}
+								finally
+								{
+									try {
+										so.close();
+									} catch (IOException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								}
+							} catch (MalformedURLException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+								Log.e("Stream2Android", "could not connect to host " + e.getMessage());
+							}
+//							if (couldconnect)
+							{
+								if (resurl.endsWith(".jpg") 
+										|| resurl.endsWith(".png"))
+								{
+									// store url for later retrieval
+									ImageUrl = resurl;
+									if (mVideoURL != "")
+										break;
+								}
+								else
+								{
+									mVideoURL = resurl;
+									Log.d("Stream2Android", "mVideoURL=" + mVideoURL);
+									if (!mVideoURL.contains(".mp4") 
+											&& !mVideoURL.contains(".wmv")
+											&& !mVideoURL.contains(".asf"))
+									{
+										Log.e("Stream2Android", "unsupported format mVideoURL=" + mVideoURL);
+										mVideoURL = "";
+										// try next res if any
+										continue;
+									}
+									// format is supported
+									// do we already have this url in our list?
+									if (mVideoItemList.containsKey(mVideoURL))
+									{
+										Log.d("Stream2Android", "get media from listadapter");
+										media = mVideoItemList.get(mVideoURL);
+										Log.d("Stream2Android", "got media from listadapter, name =" + media.getTitle());
+									}
+									else
+									{
+										// no, add to the list and update listview
+										Log.d("Stream2Android", "save mediaitem to listadapter");
+										media.setUrl(mVideoURL);
+										mVideoItemList.put(mVideoURL, media);
+
+										// update listview
+										Log.d("Stream2Android", "update listview");
+										handlerUI.sendEmptyMessage(2);
+									}
+									// update duration
+									String duration = resdata.get("duration");
+									if (duration != null)
+									{
+										durationMillis = fromHMS2Millis(duration);
+										Log.d("Stream2Android", "duration=" + durationMillis);
+										
+										setStateVariable(action, "CurrentTrackDuration", "" + durationMillis);
+									}
+									break;
 								}
 							}
-						} catch (MalformedURLException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-						mVideoURL = url;
-					
-						Log.d("Stream2Android", "mVideoURL=" + mVideoURL);
-					
-						setStateVariable(action, "CurrentTrackDuration", "" + durationMillis);
-						boolean couldConnect = false;
-	
-						HttpURLConnection conn = null;
-						BufferedInputStream in = null;
-						OutputStream raf = null;
-						Socket s = null;
+/*							else
+							{
+								Log.e("Stream2Android", "could not connect to host " + mVideoURL);
+								mVideoURL = "";
+								return false;
+							}
+*/						}
 						String filename = "tempvideo";
 						if (mVideoURL.contains(".mp4"))
 						{
@@ -483,197 +542,240 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 						}
 						else
 						{
-							Log.d("Stream2Android", "unsupported format mVideoURL=" + mVideoURL);
+							Log.e("Stream2Android", "unsupported format mVideoURL=" + mVideoURL);
 							mVideoURL = "";
 							return false;
 						}
-						if (mVideoItemList.containsKey(mVideoURL))
-						{
-							Log.d("Stream2Android", "get media from listadapter");
-							media = mVideoItemList.get(mVideoURL);
-							Log.d("Stream2Android", "got media from listadapter, name =" + media.getTitle());
-						}
-						else
-						{
-							Log.d("Stream2Android", "save mediaitem to listadapter");
-							media.setUrl(mVideoURL);
-							mVideoItemList.put(mVideoURL, media);
-						}
-						String filepath = "";
-						
-						try {
-							// update listview
-							Log.d("Stream2Android", "update listview");
-							handlerUI.sendEmptyMessage(2);
-							
-							Log.d("Stream2Android", "connect to mVideoURL=" + mVideoURL);
-							
-							u = new URL(mVideoURL);
-							InetSocketAddress sa = new InetSocketAddress(u.getHost(), u.getPort());
-							s = new Socket();
-							s.connect(sa, 1000);
-							
-							int byterate = Integer.parseInt(media.getResList().getFirst().get("bitrate"));
-							
-							int BUFFER_SIZE = byterate;
-	
-							conn = (HttpURLConnection)u.openConnection();
-							//conn.setRequestProperty("Range", "bytes=0-" + BUFFER_SIZE);
-							conn.connect();
-							Log.d("Stream2Android", "connected to mVideoURL=" + mVideoURL);
-							int responsecode = conn.getResponseCode();
-							if (responsecode / 100 == 2)
-							{
-								Log.d("Stream2Android", "response OK from mVideoURL=" + mVideoURL);
-								in = new BufferedInputStream(conn.getInputStream());
-								
-								File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
-								String state = Environment.getExternalStorageState();
-								
-								boolean mExternalStorageAvailable = false;
-								boolean mExternalStorageWriteable = false;
-								
-								if (Environment.MEDIA_MOUNTED.equals(state)) 
-								{
-									mExternalStorageAvailable  = mExternalStorageWriteable  = true;
-								} 
-								else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) 
-								{
-									mExternalStorageAvailable = true;
-									mExternalStorageWriteable = false;
-								} 
-								else 
-								{
-									mExternalStorageAvailable = mExternalStorageWriteable = false;
-								}
-								
-								Log.d("Stream2Android", "mExternalStorageAvailable=" + mExternalStorageAvailable + ", mExternalStorageWriteable=" + mExternalStorageWriteable); 
-								path.mkdirs();
-	
-								File file = new File(path, filename);
-								file.createNewFile();
-								
-								filepath = file.getAbsolutePath();
-								Log.d("Stream2Android", "save 100KB from stream to file=" + filepath); 
-								
-								raf = new FileOutputStream(file);
-								byte data[] = new byte[BUFFER_SIZE];
-								int numRead;
-								int totalread = 0;
-								while((numRead = in.read(data, 0, BUFFER_SIZE)) != -1)
-								{
-									
-									raf.write(data, 0, numRead);
-									totalread += numRead;
-									if (totalread >= BUFFER_SIZE)
-										break;
-								}
-								conn.disconnect();
-								couldConnect = true;
-							}
-							else
-							{
-								Log.e("Stream2Android", "error receiving stream: responsemessage=" + conn.getResponseMessage());
-							}
-						} catch (MalformedURLException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						} catch (Exception e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-						finally { 
-					        if (s != null) { 
-					            try {
-									s.close();
-								} catch (IOException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								} 
-					        } 
-					  
-					        if (conn != null) { 
-					            conn.disconnect(); 
-					        } 
-					  
-					        if (raf != null) { 
-					            try { 
-					                raf.close(); 
-					            } catch (IOException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								} 
-					        } 
-					  
-					        if (in != null) { 
-					            try { 
-					                in.close(); 
-					            } catch (IOException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								} 
-					        } 
-					    }
-						couldConnect = true;
-						if (couldConnect
-								&& filepath.length() > 0
-								)
-						{
-							try
-							{
-								//Log.d("Stream2Android", "createVideoThumbnail create from file=" + filepath); 
-								Log.d("Stream2Android", "createVideoThumbnail create from url=" + mVideoURL); 
-								
-								InputStream fileIn = new FileInputStream(filepath);
-	
-								Log.d("Stream2Android", "createVideoThumbnail InputStream.available=" + fileIn.available());
-								fileIn.close();
-								
-//								Bitmap m = ThumbnailUtils.createVideoThumbnail(filepath, android.provider.MediaStore.Video.Thumbnails.MICRO_KIND);
-								MediaMetadataRetriever m = 
-									new MediaMetadataRetriever();
 
-								m.setDataSource(filepath);
-								
-								Bitmap bm = null;
-								if (pre2_3) 
-								{
-									m.setMode(android.media.MediaMetadataRetriever.MODE_CAPTURE_FRAME_ONLY);
-									bm = m.captureFrame();
-								}
-								else
-									bm = m.getFrameAtTime();
-								
-								if (bm != null)
+						if (media.image == null && ImageUrl == "")
+						{
+							// no imageurl from res, try to get url from albumarturi
+							ListIterator<SortedMap<String, String>> la = media.getAlbumartList().listIterator();
+							while (la.hasNext())
+							{
+								SortedMap<String, String> resdata = la.next();
+								ImageUrl = resdata.get("albumArtURI");
+								break;
+							}
+						}
+						if (media.image == null && ImageUrl != "")
+						{
+							// retreive image from url
+							Bitmap bmImg;
+							URL myFileUrl = null;          
+						  	try {
+						  		myFileUrl = new URL(ImageUrl);
+						  	} catch (MalformedURLException e) {
+						       	// TODO Auto-generated catch block
+						       	e.printStackTrace();
+						       	// not a valid image url
+								Log.e("Stream2Android", "not a valid image url=" + ImageUrl);
+								return true;
+						  	}
+						  	try {
+						       	HttpURLConnection conn = (HttpURLConnection)myFileUrl.openConnection();
+						       	conn.setDoInput(true);
+						       	conn.connect();
+						       	InputStream is = conn.getInputStream();
+						       
+						       	bmImg = BitmapFactory.decodeStream(is);
+
+						       	if (bmImg != null)
 								{
 									java.io.ByteArrayOutputStream os = new java.io.ByteArrayOutputStream();
-									bm.compress(Bitmap.CompressFormat.JPEG, 90, os);
+									bmImg.compress(Bitmap.CompressFormat.JPEG, 90, os);
 									media.image = os.toByteArray();
-									Log.d("Stream2Android", "captureFrame succeeded, size=" + bm.getWidth() + "x" + bm.getHeight()); 
+									Log.d("Stream2Android", "download image succeeded, size=" + bmImg.getWidth() + "x" + bmImg.getHeight()); 
 
-									// display the thumb and return
+									// display the thumb and return succes
 									handlerUI.sendEmptyMessage(2);
 
 									return true;
 								}
 								else
 								{
-									Log.e("Stream2Android", "captureFrame failed"); 
+									Log.e("Stream2Android", "download image failed"); 
 								}
+						       	
+						  	} catch (IOException e) {
+						       	// TODO Auto-generated catch block
+						       		e.printStackTrace();
+						  	}
+						}
+						
+						if (media.image == null)
+						{
+							// retreive image from stream
+							boolean couldConnect = false;
+		
+							HttpURLConnection conn = null;
+							BufferedInputStream in = null;
+							OutputStream raf = null;
+							Socket s = null;
+							String filepath = "";
+						
+							try {
+								
+								Log.d("Stream2Android", "connect to mVideoURL=" + mVideoURL);
+								
+								URL u = new URL(mVideoURL);
+								InetSocketAddress sa = new InetSocketAddress(u.getHost(), u.getPort());
+								s = new Socket();
+								s.connect(sa, 1000);
+								
+								int byterate = Integer.parseInt(media.getResList().getFirst().get("bitrate"));
+								
+								int BUFFER_SIZE = byterate;
+		
+								conn = (HttpURLConnection)u.openConnection();
+								//conn.setRequestProperty("Range", "bytes=0-" + BUFFER_SIZE);
+								conn.connect();
+								Log.d("Stream2Android", "connected to mVideoURL=" + mVideoURL);
+								int responsecode = conn.getResponseCode();
+								if (responsecode / 100 == 2)
+								{
+									Log.d("Stream2Android", "response OK from mVideoURL=" + mVideoURL);
+									in = new BufferedInputStream(conn.getInputStream());
+									
+									File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
+									String state = Environment.getExternalStorageState();
+									
+									boolean mExternalStorageAvailable = false;
+									boolean mExternalStorageWriteable = false;
+									
+									if (Environment.MEDIA_MOUNTED.equals(state)) 
+									{
+										mExternalStorageAvailable  = mExternalStorageWriteable  = true;
+									} 
+									else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) 
+									{
+										mExternalStorageAvailable = true;
+										mExternalStorageWriteable = false;
+									} 
+									else 
+									{
+										mExternalStorageAvailable = mExternalStorageWriteable = false;
+									}
+									
+									Log.d("Stream2Android", "mExternalStorageAvailable=" + mExternalStorageAvailable + ", mExternalStorageWriteable=" + mExternalStorageWriteable); 
+									path.mkdirs();
+		
+									File file = new File(path, filename);
+									file.createNewFile();
+									
+									filepath = file.getAbsolutePath();
+									Log.d("Stream2Android", "save 100KB from stream to file=" + filepath); 
+									
+									raf = new FileOutputStream(file);
+									byte data[] = new byte[BUFFER_SIZE];
+									int numRead;
+									int totalread = 0;
+									while((numRead = in.read(data, 0, BUFFER_SIZE)) != -1)
+									{
+										
+										raf.write(data, 0, numRead);
+										totalread += numRead;
+										if (totalread >= BUFFER_SIZE)
+											break;
+									}
+									conn.disconnect();
+									couldConnect = true;
+								}
+								else
+								{
+									Log.e("Stream2Android", "error receiving stream: responsemessage=" + conn.getResponseMessage());
+								}
+							} catch (MalformedURLException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
 							} catch (Exception e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
-							// thumb not created, return anyway
-							return true;
+							finally { 
+						        if (s != null) { 
+						            try {
+										s.close();
+									} catch (IOException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} 
+						        } 
+						  
+						        if (conn != null) { 
+						            conn.disconnect(); 
+						        } 
+						  
+						        if (raf != null) { 
+						            try { 
+						                raf.close(); 
+						            } catch (IOException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} 
+						        } 
+						  
+						        if (in != null) { 
+						            try { 
+						                in.close(); 
+						            } catch (IOException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} 
+						        } 
+						    }
+							couldConnect = true;
+							if (couldConnect
+									&& filepath.length() > 0
+									)
+							{
+								try
+								{
+									Log.d("Stream2Android", "createVideoThumbnail create from file=" + filepath); 
+									
+									InputStream fileIn = new FileInputStream(filepath);
+		
+									Log.d("Stream2Android", "createVideoThumbnail InputStream.available=" + fileIn.available());
+									fileIn.close();
+									
+	//								Bitmap m = ThumbnailUtils.createVideoThumbnail(filepath, android.provider.MediaStore.Video.Thumbnails.MICRO_KIND);
+									MediaMetadataRetriever m = 
+										new MediaMetadataRetriever();
+	
+									m.setDataSource(filepath);
+									
+									Bitmap bm = null;
+									if (pre2_3) 
+									{
+										m.setMode(android.media.MediaMetadataRetriever.MODE_CAPTURE_FRAME_ONLY);
+										bm = m.captureFrame();
+									}
+									else
+										bm = m.getFrameAtTime();
+									
+									if (bm != null)
+									{
+										java.io.ByteArrayOutputStream os = new java.io.ByteArrayOutputStream();
+										bm.compress(Bitmap.CompressFormat.JPEG, 90, os);
+										media.image = os.toByteArray();
+										Log.d("Stream2Android", "captureFrame succeeded, size=" + bm.getWidth() + "x" + bm.getHeight()); 
+	
+										// display the thumb and return
+										handlerUI.sendEmptyMessage(2);
+	
+										return true;
+									}
+									else
+									{
+										Log.e("Stream2Android", "captureFrame failed"); 
+									}
+								} catch (Exception e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							}
 						}
-						else
-						{
-							// could not connect to url or no stream-data was saved
-							Log.e("Stream2Android", "could not connect to url or no stream-data was saved"); 
-							mVideoURL = "";
-							return false;
-						}
+						return true;
 					}
 					else
 					{
@@ -895,6 +997,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
         public SortedMap<String, MediaItem> ImageItemList = new TreeMap<String, MediaItem>();
         
         public SortedMap<String, String> streamattributes = null;
+        public SortedMap<String, String> albumartattributes = null;
 
         MediaItem currentItem = null;
 
@@ -906,24 +1009,30 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 	    public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException
 	    {  
 	    	currentValue = "";
-	    	if (qName.equals("item"))
+	    	if (qName.equalsIgnoreCase("item"))
 	    	{
 	    		currentItem = new MediaItem();
 	    	}
-	    	else if (qName.equals("dc:title")) 
+	    	else if (qName.equalsIgnoreCase("dc:title")) 
 	        {  
 	        	currentElement = true;
 	        }  
-	    	else if (qName.equals("upnp:class")) 
+	    	else if (qName.equalsIgnoreCase("upnp:class")) 
 	        {  
 	        	currentElement = true;
 	        }  
-	        else if (qName.equals("res")) 
+	         else if (qName.equalsIgnoreCase("upnp:albumArtURI"))
+	         {
+	        	 albumartattributes = new TreeMap<String, String>();
+	        	 
+	        	 albumartattributes.put("protocolInfo", attributes.getValue("dlna:profileID"));
+	        	 
+	        	 currentElement = true;
+	        	 
+	         }
+	        else if (qName.equalsIgnoreCase("res")) 
 	        {  
 	        	streamattributes = new TreeMap<String, String>();
-	        	
-	        	//duration = attributes.getValue("duration");
-	        	//protocolInfo = attributes.getValue("protocolInfo");
 	        	
 	        	for (int attributecount = 0; attributecount < attributes.getLength(); attributecount++)
 	        	{
@@ -954,6 +1063,12 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
             {
             	currentItem.setUpnp_class(currentValue);
             }  
+			 else if (qName.equalsIgnoreCase("upnp:albumArtURI"))
+			 {
+				 albumartattributes.put("albumArtURI", currentValue);
+			     currentItem.getAlbumartList().add(albumartattributes);
+			     
+			 }
             else if (qName.equalsIgnoreCase("res")) 
             {
 	        	streamattributes.put("res", currentValue);
@@ -962,17 +1077,17 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
             }
             else if (qName.equalsIgnoreCase("item")) 
 	        {
-	        	if (currentItem.getUpnp_class().equals("object.item.videoItem"))
+	        	if (currentItem.getUpnp_class().equalsIgnoreCase("object.item.videoItem"))
 				{
 					Log.d("Stream2Android", "adding object.item.videoItem '" + currentItem.getTitle() + "' rescount=" + currentItem.getResList().size());
 					VideoItemList.put(currentItem.getTitle(), currentItem);
 				}
-				else if (currentItem.getUpnp_class().equals("object.item.audioItem"))
+				else if (currentItem.getUpnp_class().equalsIgnoreCase("object.item.audioItem"))
 				{
 					Log.d("Stream2Android", "adding object.item.audioItem '" + currentItem.getTitle() + "' rescount=" + currentItem.getResList().size());
 					AudioItemList.put(sTitle, currentItem);
 				}				
-				else if (currentItem.getUpnp_class().equals("object.item.imageItem"))
+				else if (currentItem.getUpnp_class().equalsIgnoreCase("object.item.imageItem"))
 				{
 					Log.d("Stream2Android", "adding object.item.imageItem '" + currentItem.getTitle() + "' rescount=" + currentItem.getResList().size());
 					ImageItemList.put(sTitle, currentItem);
@@ -987,8 +1102,16 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
     	private String title = "";
     	private String upnp_class = "";
     	private LinkedList<SortedMap<String, String>> resList = new LinkedList<SortedMap<String, String>>();
-		private byte[] image;
+    	private LinkedList<SortedMap<String, String>> albumartList = new LinkedList<SortedMap<String, String>>();
+
+    	private byte[] image;
 		private String url = "";
+
+		public LinkedList<SortedMap<String, String>> getAlbumartList() {
+			// TODO Auto-generated method stub
+			return albumartList;
+		}
+
     	/**
 		 * @return the title
 		 */
