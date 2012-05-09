@@ -47,7 +47,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Movie;
 //import android.content.pm.ActivityInfo;
-import android.media.MediaMetadataRetriever;
+//import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
@@ -427,7 +427,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 						while (li.hasNext())
 						{
 							SortedMap<String, String> resdata = li.next();
-							// connect to first res
+							// connect to first resource
 							String resurl = resdata.get("res");
 							Log.d("Stream2Android", "resource url=" + resurl + ""); 
 							// correct url for multi ip-clients
@@ -473,14 +473,18 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 								{
 									// store url for later retrieval
 									ImageUrl = resurl;
+									// if we do have the video-url, w're done
 									if (mVideoURL != "")
 										break;
+									// else, continue to look for the video-url
 								}
 								else
 								{
+									// this is the video resource
 									mVideoURL = resurl;
 									Log.d("Stream2Android", "mVideoURL=" + mVideoURL);
 									if (!mVideoURL.contains(".mp4") 
+											&& !mVideoURL.contains(".mkv")
 											&& !mVideoURL.contains(".wmv")
 											&& !mVideoURL.contains(".asf"))
 									{
@@ -512,8 +516,9 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 									String duration = resdata.get("duration");
 									if (duration != null)
 									{
-										durationMillis = fromHMS2Millis(duration);
 										Log.d("Stream2Android", "duration=" + durationMillis);
+										durationMillis = fromHMS2Millis(duration);
+										Log.d("Stream2Android", "duration=" + durationMillis + " ms");
 										
 										setStateVariable(action, "CurrentTrackDuration", "" + durationMillis);
 									}
@@ -540,6 +545,10 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 						{
 							filename += ".wmv";
 						}
+						else if (mVideoURL.contains(".mkv"))
+						{
+							filename += ".mkv";
+						}
 						else
 						{
 							Log.e("Stream2Android", "unsupported format mVideoURL=" + mVideoURL);
@@ -560,7 +569,8 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 						}
 						if (media.image == null && ImageUrl != "")
 						{
-							// retreive image from url
+							// no image but we do have an image-url
+							// retreive image from this url
 							Bitmap bmImg;
 							URL myFileUrl = null;          
 						  	try {
@@ -603,9 +613,11 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 						  	}
 						}
 						
+						// do we have an image?
 						if (media.image == null)
 						{
-							// retreive image from stream
+							// no, retreive image from video-stream
+							// capture stream to disk 
 							boolean couldConnect = false;
 		
 							HttpURLConnection conn = null;
@@ -729,7 +741,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 									&& filepath.length() > 0
 									)
 							{
-								try
+								/*try
 								{
 									Log.d("Stream2Android", "createVideoThumbnail create from file=" + filepath); 
 									
@@ -773,6 +785,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
+								*/
 							}
 						}
 						return true;
@@ -1211,7 +1224,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 	}
 	public void testMediaMetadataRetriever()
 	{
-		android.media.MediaMetadataRetriever  m = new android.media.MediaMetadataRetriever();
+/*		android.media.MediaMetadataRetriever  m = new android.media.MediaMetadataRetriever();
 
 		//Get the methods
         Method[] methods = m.getClass().getDeclaredMethods();
@@ -1273,6 +1286,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 				upnpDev.handlerUI.sendEmptyMessage(2);
 			}
         }
+        */
 	}
 	@Override
 	public boolean onError(MediaPlayer mp, int what, int extra) {
