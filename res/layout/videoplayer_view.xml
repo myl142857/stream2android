@@ -4,7 +4,7 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    >
+	android:keepScreenOn="true">
     
     <org.hansdeveloper.Stream2Android.TVVideoView 
         android:id="@+id/video_view" 
