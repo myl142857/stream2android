@@ -741,7 +741,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 									&& filepath.length() > 0
 									)
 							{
-								/*try
+								try
 								{
 									Log.d("Stream2Android", "createVideoThumbnail create from file=" + filepath); 
 									
@@ -750,8 +750,8 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 									Log.d("Stream2Android", "createVideoThumbnail InputStream.available=" + fileIn.available());
 									fileIn.close();
 									
-	//								Bitmap m = ThumbnailUtils.createVideoThumbnail(filepath, android.provider.MediaStore.Video.Thumbnails.MICRO_KIND);
-									MediaMetadataRetriever m = 
+									Bitmap bm = ThumbnailUtils.createVideoThumbnail(filepath, android.provider.MediaStore.Video.Thumbnails.MICRO_KIND);
+									/*MediaMetadataRetriever m = 
 										new MediaMetadataRetriever();
 	
 									m.setDataSource(filepath);
@@ -764,7 +764,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 									}
 									else
 										bm = m.getFrameAtTime();
-									
+									*/
 									if (bm != null)
 									{
 										java.io.ByteArrayOutputStream os = new java.io.ByteArrayOutputStream();
@@ -775,17 +775,14 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 										// display the thumb and return
 										handlerUI.sendEmptyMessage(2);
 	
-										return true;
 									}
 									else
 									{
 										Log.e("Stream2Android", "captureFrame failed"); 
 									}
 								} catch (Exception e) {
-									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
-								*/
 							}
 						}
 						return true;
