@@ -25,7 +25,8 @@
     android:id="@+id/mainview"
     android:layout_width="match_parent" 
 	android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical" 
+	android:keepScreenOn="true">
 	<ViewFlipper android:id="@+id/viewstack"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent">
