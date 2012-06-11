@@ -32,12 +32,12 @@ public class TVVideoView extends VideoView {
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 		// TODO Auto-generated method stub
 		
-		Log.d(TAG, ">onMeasure widthMeasureSpec="+ widthMeasureSpec + ", heightMeasureSpec=" + heightMeasureSpec);
+		//Log.d(TAG, ">onMeasure widthMeasureSpec="+ widthMeasureSpec + ", heightMeasureSpec=" + heightMeasureSpec);
 
 		int width = getDefaultSize(mVideoWidth, widthMeasureSpec);
 		int height = getDefaultSize(mVideoHeight, heightMeasureSpec);
         
-		Log.d(TAG, "onMeasure getDefaultSize width="+ width + ", height=" + height);
+		//Log.d(TAG, "onMeasure getDefaultSize width="+ width + ", height=" + height);
 		
         //super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         if (mVideoWidth > 0 && mVideoHeight > 0) {
@@ -55,13 +55,13 @@ public class TVVideoView extends VideoView {
             }
         }
         //Log.i("@@@@@@@@@@", "setting size: " + width + 'x' + height);
-		Log.d(TAG, "onMeasure width="+ width + ", height=" + height);
+		//Log.d(TAG, "onMeasure width="+ width + ", height=" + height);
         setMeasuredDimension(width, height);
-		Log.d(TAG, "onMeasure setMeasuredDimension="+ getMeasuredWidth() + "x" + getMeasuredHeight());
+		//Log.d(TAG, "onMeasure setMeasuredDimension="+ getMeasuredWidth() + "x" + getMeasuredHeight());
         
         if (super.getHolder() != null)
         {
-            Log.d(TAG, "onMeasure setFixedSize="+ getMeasuredWidth() + "x" + getMeasuredHeight());
+            //Log.d(TAG, "onMeasure setFixedSize="+ getMeasuredWidth() + "x" + getMeasuredHeight());
         	//super.getHolder().setFixedSize(getMeasuredWidth(), getMeasuredWidth()*9/16);
             super.getHolder().setFixedSize(getMeasuredWidth(), getMeasuredHeight());
         }

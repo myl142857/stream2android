@@ -516,7 +516,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 									String duration = resdata.get("duration");
 									if (duration != null)
 									{
-										Log.d("Stream2Android", "duration=" + durationMillis);
+										Log.d("Stream2Android", "duration=" + duration);
 										durationMillis = fromHMS2Millis(duration);
 										Log.d("Stream2Android", "duration=" + durationMillis + " ms");
 										
@@ -635,7 +635,9 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 								s = new Socket();
 								s.connect(sa, 1000);
 								
-								int byterate = Integer.parseInt(media.getResList().getFirst().get("bitrate"));
+								int byterate = 2000000;
+								if (media.getResList().getFirst().get("bitrate") != null)
+									byterate = Integer.parseInt(media.getResList().getFirst().get("bitrate"));
 								
 								int BUFFER_SIZE = byterate;
 		
@@ -1182,6 +1184,9 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 	@Override
 	public void onCompletion(MediaPlayer arg0) {
 		// TODO Auto-generated method stub
+		
+		Log.d("Stream2Android", "MediaPlayer.onCompletion"); 
+		
 		upnpDev.startMillis = 0;
 		upnpDev.setStateVariable("urn:upnp-org:serviceId:AVTransport", "TransportState", "STOPPED");
 		mListViewMain.setVisibility(View.VISIBLE);
@@ -1288,6 +1293,8 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 	@Override
 	public boolean onError(MediaPlayer mp, int what, int extra) {
 		// TODO Auto-generated method stub
+		Log.d("Stream2Android", "MediaPlayer.onError what=" + what); 
+
 		upnpDev.startMillis = 0;
 		upnpDev.setStateVariable("urn:upnp-org:serviceId:AVTransport", "TransportState", "STOPPED");
 		mListViewMain.setVisibility(View.VISIBLE);
@@ -1298,6 +1305,7 @@ public class main extends ListActivity implements OnCompletionListener, KeyListe
 	@Override
 	public void onPrepared(MediaPlayer mp) {
 		// TODO Auto-generated method stub
+		Log.d("Stream2Android", "MediaPlayer.onPrepared"); 
 		mListViewMain.setVisibility(View.GONE);
 		mClearList.setVisibility(View.GONE);
 	}
