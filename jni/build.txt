@@ -1,0 +1,5 @@
+Android NDK: WARNING: Unsupported source file extensions in /ffmpegjni/jni/Android.mk for module avcodec    
+Android NDK:   libavcodec/arm/dsputil_arm.h libavcodec/arm/mpegvideo_arm.h    
+Gdbserver      : [arm-linux-androideabi-4.4.3] libs/armeabi/gdbserver
+Gdbsetup       : libs/armeabi/gdb.setup
+SharedLibrary  : libffmpegjni.so
