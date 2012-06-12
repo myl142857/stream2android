@@ -7,7 +7,7 @@ public class ffmpegjni
 {
 	public ffmpegjni()
 	{
-        Integer version = Init();
+        Init();
 	}
 /*			File file = new File(v.parentdirectory, ".frame.bmp");
 			Open(f);
