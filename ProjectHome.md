@@ -1,0 +1,1 @@
+Use your Android device to play media from a remote upnp-Controlpoint like Windows Media Player play-to function.
